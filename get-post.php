@@ -4,12 +4,10 @@ Plugin Name: Get post
 Plugin URI: http://wordpress.org/extend/plugins/get-post/
 Description: Add parser functions for getting specific posts
 Author: James Tatum
-Version: 1.0.2
+Version: 2.0.0
 Author URI: http://thelightness.blogspot.com
 */
-?>
-<?php
-/*  Copyright 2008  James Tatum  (email : jtatum@gmail.com)
+/*  Copyright 2008, 2011  James Tatum  (email : jtatum@gmail.com)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -25,73 +23,115 @@ Author URI: http://thelightness.blogspot.com
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-?>
-<?php
-if (!class_exists('JamesGetPost'))
+
+/**
+* I tried to separate out reusable components into classes.
+* The non-reusable components are in PluginGetPost. Remember to set DEBUG
+* in wp-config.php if making changes, particularly to the parser.
+*/
+
+include_once dirname( __FILE__ ) . '/class-get-post-parser.php';
+include_once dirname( __FILE__ ) . '/class-get-post-getter.php';
+
+if ( !class_exists('PluginGetPostError') )
 {
-    class JamesGetPost
+	/**
+	* Exception class. This will be raised if something goes wrong in parsing
+	* or getting. Caught errors should be displayed to the user.
+	*/
+	class PluginGetPostError extends Exception { }
+}
+
+if (!class_exists('PluginGetPost'))
+{
+	/**
+	* Plugin class. This class contains all plugin related members.
+	* The actual work is done in PluginGetPostGetter.
+	*/
+    class PluginGetPost
     {
-        function JamesGetPost()
+		/**
+		* Try to figure out what the user wants. This should either return
+		* a configured PluginGetPostGetter object or raise an exception.
+		*/
+        private function read_params($params)
         {
+			$parser = new PluginGetPostParser();
+			$options = $parser->parse_params($params);
+			// Create an object and pass it junk
+			$post_getter = new PluginGetPostGetter();
+			$errors = '';
+			// if ( count($options) == 0 )
+			// {
+			// 	throw new PluginGetPostError('No options specified');
+			// }
+			foreach ( $options as $key => $value )
+			{
+				switch ( strtolower($key) )
+				{
+					case 'tag':
+						$post_getter->set_tag($value);
+						break;
+					case 'category':
+						$post_getter->set_category($value);
+						break;
+					case 'show':
+						$post_getter->set_show_posts($value);
+						break;
+					case 'random':
+						$post_getter->set_random(1);
+						break;
+					default:
+						$errors .= "Unknown option: $key ";
+						break;
+				}
+			}
+			if ( $errors != '' )
+			{
+				throw new PluginGetPostError($errors);
+			}
+			return $post_getter;
         }
 
-        function get_post($tag='')
+		/**
+		* Scan post content. The plugin registers to see all post content, so
+		* here's where we scan it and replace [get-post] tags with something
+		* like the post they requested. Hopefully.
+		*/
+        public function scan_content($content = '')
         {
-            global $wp_query, $post, $id;
-            $temp_query = clone $wp_query;
-            $temp_post = clone $post;
-            $temp_id = $id;
-            $tag=htmlentities($tag);
-            $myq = new WP_Query("tag=$tag&showposts=1");
-            if ( $myq->have_posts() ) while ( $myq->have_posts() )
+            $re = '/(\[get\-post(.*)\])/';
+            if ( preg_match_all($re, $content, $matches, PREG_SET_ORDER) )
             {
-                $myq->the_post();
-                $pc='<div class="post" id="post-'.$post->ID.'">';
-                $pc.='<h2><a href="'.get_permalink().'" rel="bookmark">'.htmlentities($post->post_title).'</a></h2>';
-                $pc.='<div class="entry">';
-                $pc.=$post->post_content;
-                $pc.='</div>';
-                $pc.='</div>';
-            }
-            $wp_query = clone $temp_query;
-            $post = clone $temp_post;
-            $id = $temp_id;
-            return $pc;
-        }
-
-        function read_params($params)
-        {
-            $re = '/tag="(?<tag>.+)"/';
-            preg_match($re, $params, $matches);
-            $tag = $matches['tag'];
-            // Post content would be here
-            return $this->get_post($tag);
-        }
-        function scan_content($content = '')
-        {
-            $re = '/(?<str>\[get\-post(?<params>.*)\])/';
-            if (preg_match($re, $content, $matches))
-            {
-                $params = $matches['params'];
-                $replace = $matches['str'];
-                // Post content would be here
-                $postcontent = $this->read_params($params);
-                $content = str_replace($replace, $postcontent, $content);
+				foreach ($matches as $match)
+				{
+	                $params = $match[2];
+	                $replace = $match[1];
+					try {
+		                $post_getter = $this->read_params($params);
+					} catch (PluginGetPostError $e)
+					{
+						$result = '<span style="color:red;">Get-post
+						encountered an error: </span>';
+						$result .= $e->getMessage();
+					}
+					$result = $post_getter->get();
+					// Replace the tag with the result of the call
+	                $content = str_replace($replace, $result, $content);
+				}
             }
             return $content;
         }
     }
-
 }
 
-if (class_exists('JamesGetPost'))
+if ( class_exists('PluginGetPost') )
 {
-    $getpostplugin = new JamesGetPost();
+    $get_post_plugin = new PluginGetPost();
 }
 
-if (isset($getpostplugin))
+if ( isset($get_post_plugin) )
 {
-    add_filter('the_content', array($getpostplugin, 'scan_content'));
+	// Register a new filter with WordPress to receive all post content
+    add_filter('the_content', array($get_post_plugin, 'scan_content'));
 }
-
-?>
