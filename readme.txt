@@ -21,7 +21,7 @@ as follows:
 
 This will be replaced with the latest post tagged with the given tag.
 
-== Parameters ==
+= Parameters =
 
 The parameters control which posts are retrieved by get-post. Options can be
 used in combination to build a list of criteria for post or posts to retrieve.
@@ -80,7 +80,7 @@ post.
 
         [get-post]
 
-== Templates ==
+= Templates =
 
 Get-post ships with a default template that should render the usual post
 details in a form that fits well with most themes. You can customize this
@@ -129,6 +129,17 @@ Link to the latest post:
 
     Check out my post: [get-post template="<a href='{permalink}'>{title}</a>"]
 
+= How it works =
+
+This plugin does something a little bit unorthodox: It reenters ["The
+Loop"][the loop] while the post content is being rendered. Then, it calls
+whatever Wordpress internal functions will safely work, using raw data from
+$post when these functions are unsafe to call again. People curious about the
+internals should examine `class-get-post-getter.php`. The class is structured
+to be reusable by any other GPL2 projects.
+
+[the loop]: http://codex.wordpress.org/The_Loop
+
 == Installation ==
 
 1. Upload `get-post.php` to the `/wp-content/plugins/` directory
@@ -140,18 +151,9 @@ Link to the latest post:
 1. Example page showing get-post invoked three times - once to display some
    dates, once to show a link, and once with the default template.
 
-== Notes ==
-
-This plugin does something a little bit unorthodox: It reenters ["The
-Loop"][the loop] while the post content is being rendered. As it does not
-process plugins while in the loop, an infinite loop is not possible at the
-moment. Processing plugins properly is planned for a future release.
-
-[the loop]: http://codex.wordpress.org/The_Loop
-
 == Changelog ==
 
-= 2.0.0 XX-Jun-2011 =
+= 2.0.0 5-Jun-2011 =
 
 * Rewrite of internals. The option parser is a lot more powerful. The new
   design makes adding new options simpler.
