@@ -119,6 +119,9 @@ A link to all posts by the post's author.
 * {id}:
 The post's ID number.
 
+* {excerpt}
+The post's excerpt.
+
 = Examples =
 
 Indicate when your blog was last updated:

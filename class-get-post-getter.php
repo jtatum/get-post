@@ -145,6 +145,7 @@ if ( !class_exists('PluginGetPostGetter') )
                 $current = str_replace('{title}', $post->post_title, $current);
                 $current = str_replace('{date}', get_the_date(), $current);
                 $current = str_replace('{time}', get_the_time(), $current);
+                $current = str_replace('{excerpt}', get_the_excerpt(), $current);
                 $current = str_replace('{author}', get_the_author(), $current);
                 $current = str_replace('{authorlink}',
                     get_author_posts_url($authordata->ID), $current);
