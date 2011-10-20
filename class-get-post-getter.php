@@ -150,6 +150,17 @@ if ( !class_exists('PluginGetPostGetter') )
                 $current = str_replace('{authorlink}',
                     get_author_posts_url($authordata->ID), $current);
                 $current = str_replace('{content}', $post_content, $current);
+                $rpur_permalink = get_post_meta($post->ID,
+                                                'rpur_sourcepermalink', true);
+                if ($rpur_permalink)
+                {
+                    $current = str_replace('{rpur_permalink}', $rpur_permalink,
+                                           $current);
+                }
+                else
+                {
+                    $current = str_replace('{rpur_permalink}', '', $current);
+                }
                 $content .= $current;
             }
             // $wp_query = clone $temp_query;
